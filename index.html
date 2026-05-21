@@ -1,11 +1,83 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hu">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Togyi</title>
+    <title>Navigációs Panel</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a12;
+            color: #00ffcc;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+        }
+
+        .button-container {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-btn {
+            padding: 20px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            background: transparent;
+            color: #00ffcc;
+            border: 2px solid #00ffcc;
+            border-radius: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .nav-btn:hover {
+            background: #00ffcc;
+            color: #0a0a12;
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-alt {
+            color: #ff0055;
+            border-color: #ff0055;
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.1);
+        }
+
+        .btn-alt:hover {
+            background: #ff0055;
+            color: #0a0a12;
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.4);
+        }
+    </style>
 </head>
 <body>
-    <button>Gomb</button>
+
+    <h1>Válassz úti célt</h1>
+
+    <div class="button-container">
+        <a href="http://togyi.rgopages.hu/kaki" class="nav-btn">Kaki oldal</a>
+        <a href="http://togyi.rgopages.hu/sigma" class="nav-btn btn-alt">Sigma oldal</a>
+    </div>
+
 </body>
 </html>
