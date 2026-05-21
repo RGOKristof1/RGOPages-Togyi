@@ -1,0 +1,490 @@
+
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sigma loves!</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a12;
+            color: #00ffcc;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0px 0px 40px rgba(0, 255, 204, 0.15);
+            border-radius: 8px;
+            overflow: hidden;
+            width: 960px;
+            height: 540px;
+        }
+
+        canvas {
+            display: block;
+            background: #0f0f1a;
+        }
+
+        /* --- UI Rendszer --- */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 10, 18, 0.85);
+            z-index: 20;
+            transition: all 0.3s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Főmenü */
+        #main-menu h1 {
+            font-size: 50px;
+            margin-bottom: 10px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, #00f0ff, #ff0055);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+
+        #main-menu p {
+            color: #8a8ab0;
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            background: transparent;
+            border: 2px solid #00ffcc;
+            color: #00ffcc;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+            transition: 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: #00ffcc;
+            color: #0a0a12;
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.5);
+        }
+
+        /* Képernyők üzenetei */
+        .status-title {
+            font-size: 40px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Játék közbeni felső HUD */
+        #game-hud {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .score-row {
+            display: flex;
+            gap: 60px;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .score-box {
+            padding: 5px 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        #p1-score { color: #00f0ff; text-shadow: 0 0 10px rgba(0, 240, 255, 0.5); }
+        #p2-score { color: #ff0055; text-shadow: 0 0 10px rgba(255, 0, 85, 0.5); }
+
+        #match-point-alert {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffcc00;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.6);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #controls-overlay {
+            margin-top: 20px;
+            display: flex;
+            gap: 50px;
+            font-size: 13px;
+            color: #8a8ab0;
+            background: rgba(15, 15, 26, 0.8);
+            padding: 12px 25px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="main-menu" class="overlay">
+            <h1>Rooftop Showdown</h1>
+            <p>Első játékos, aki elér 10 pontot, nyer!</p>
+            <button class="btn" onclick="startGame()">Játék Indítása</button>
+        </div>
+
+        <div id="status-screen" class="overlay hidden">
+            <div id="status-text" class="status-title">Kör Vége</div>
+            <div id="sub-status-text" style="font-size: 18px; color: #8a8ab0; margin-bottom: 30px;">Készülés a következő körre...</div>
+            <button id="restart-btn" class="btn hidden" onclick="resetWholeMatch()">Új Meccs</button>
+        </div>
+
+        <div id="game-hud" class="hidden">
+            <div class="score-row">
+                <div class="score-box" id="p1-score">0</div>
+                <div class="score-box" id="p2-score">0</div>
+            </div>
+            <div id="match-point-alert">MATCH POINT</div>
+        </div>
+
+        <canvas id="gameCanvas" width="960" height="540"></canvas>
+    </div>
+
+    <div id="controls-overlay">
+        <div><strong style="color: #00f0ff;">CYAN:</strong> W = Ugrás / E = Lövés</div>
+        <div><strong style="color: #ff0055;">PINK:</strong> I = Ugrás / O = Lövés</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // UI elemek
+        const mainMenu = document.getElementById("main-menu");
+        const statusScreen = document.getElementById("status-screen");
+        const statusText = document.getElementById("status-text");
+        const subStatusText = document.getElementById("sub-status-text");
+        const restartBtn = document.getElementById("restart-btn");
+        const gameHud = document.getElementById("game-hud");
+        const p1ScoreEl = document.getElementById("p1-score");
+        const p2ScoreEl = document.getElementById("p2-score");
+        const matchPointAlert = document.getElementById("match-point-alert");
+
+        let score1 = 0;
+        let score2 = 0;
+        const maxScore = 10;
+        let gameActive = false;
+        let roundOver = false;
+
+        const config = {
+            gravity: 0.35,
+            roofY: 380,
+            roofX: 230,
+            roofWidth: 500,
+            roofHeight: 160
+        };
+
+        let particles = [];
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 12; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 3 + 1,
+                    alpha: 1,
+                    color: color
+                });
+            }
+        }
+
+        class Player {
+            constructor(x, y, color, side) {
+                this.startX = x; this.startY = y;
+                this.x = x; this.y = y;
+                this.width = 24; this.height = 50;
+                this.color = color; this.side = side;
+                this.velX = 0; this.velY = 0;
+                this.isGrounded = false;
+                this.angle = 0;
+                this.angleSpeed = 0.04 + Math.random() * 0.02;
+                this.angleDir = side; 
+                this.isDead = false;
+            }
+
+            update() {
+                this.velY += config.gravity;
+                this.x += this.velX;
+                this.y += this.velY;
+                this.velX *= 0.88;
+
+                if (this.x + this.width > config.roofX && this.x < config.roofX + config.roofWidth) {
+                    if (this.y + this.height >= config.roofY && this.y + this.height - this.velY <= config.roofY) {
+                        this.y = config.roofY - this.height;
+                        this.velY = 0;
+                        this.isGrounded = true;
+                    }
+                } else {
+                    this.isGrounded = false;
+                }
+
+                if (this.isGrounded) {
+                    this.angle += this.angleSpeed * this.angleDir;
+                    if (Math.abs(this.angle) > 0.5) this.angleDir *= -1;
+                } else {
+                    this.angle *= 0.95;
+                }
+
+                if (this.y > canvas.height && !this.isDead && gameActive && !roundOver) {
+                    this.isDead = true;
+                    handleRoundEnd(this.color === '#00f0ff' ? 2 : 1);
+                }
+            }
+
+            jump() {
+                if (this.isGrounded && !roundOver) {
+                    this.velY = -8.5;
+                    this.velX = this.angle * 7;
+                    this.isGrounded = false;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height);
+                ctx.rotate(this.angle);
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.width / 2, -this.height + 16, this.width, this.height - 16);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(-this.width / 3, -this.height, (this.width / 3) * 2, 14);
+                ctx.shadowColor = "#ffffff";
+                ctx.fillStyle = "#ffffff";
+                if (this.side === 1) ctx.fillRect(4, -this.height + 22, 28, 6);
+                else ctx.fillRect(-32, -this.height + 22, 28, 6);
+                ctx.restore();
+                ctx.shadowBlur = 0;
+            }
+
+            reset() {
+                this.x = this.startX; this.y = this.startY;
+                this.velX = 0; this.velY = 0; this.angle = 0;
+                this.isDead = false;
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, dir, color) {
+                this.x = x; this.y = y; this.w = 15; this.h = 3;
+                this.speed = 16; this.dir = dir; this.color = color;
+                this.active = true;
+            }
+            update() {
+                this.x += this.speed * this.dir;
+                if (this.x < 0 || this.x > canvas.width) this.active = false;
+            }
+            draw() {
+                ctx.save();
+                ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.w * this.dir, this.h);
+                ctx.restore();
+            }
+        }
+
+        const p1 = new Player(300, 200, '#00f0ff', 1);
+        const p2 = new Player(630, 200, '#ff0055', -1);
+        let bullets = [];
+
+        // START GAME
+        function startGame() {
+            mainMenu.classList.add("hidden");
+            gameHud.classList.remove("hidden");
+            gameActive = true;
+            resetWholeMatch();
+        }
+
+        // INPUT
+        window.addEventListener('keydown', (e) => {
+            if (!gameActive || roundOver) return;
+            const key = e.key.toLowerCase();
+
+            if (key === 'w') p1.jump();
+            if (key === 'e' && !p1.isDead) {
+                bullets.push(new Bullet(p1.x + p1.width + 10, p1.y + 24, 1, '#00f0ff'));
+                p1.velX = -4.5;
+                createExplosion(p1.x + p1.width + 10, p1.y + 24, '#00f0ff');
+            }
+
+            if (key === 'i') p2.jump();
+            if (key === 'o' && !p2.isDead) {
+                bullets.push(new Bullet(p2.x - 10, p2.y + 24, -1, '#ff0055'));
+                p2.velX = 4.5;
+                createExplosion(p2.x - 10, p2.y + 24, '#ff0055');
+            }
+        });
+
+        // KÖR VÉGE KEZELÉSE
+        function handleRoundEnd(winner) {
+            roundOver = true;
+
+            if (winner === 1) {
+                score1++;
+                p1ScoreEl.innerText = score1;
+                statusText.innerText = "KÁN JÁTÉKOS NYERTE A KÖRT!";
+                statusText.style.color = "#00f0ff";
+            } else {
+                score2++;
+                p2ScoreEl.innerText = score2;
+                statusText.innerText = "PINK JÁTÉKOS NYERTE A KÖRT!";
+                statusText.style.color = "#ff0055";
+            }
+
+            // Match Point ellenőrzés a HUD-on
+            if (score1 === maxScore - 1 || score2 === maxScore - 1) {
+                matchPointAlert.style.opacity = "1";
+            }
+
+            statusScreen.classList.remove("hidden");
+
+            // MECCS VÉGE ELLENŐRZÉS (10 pontnál)
+            if (score1 === maxScore || score2 === maxScore) {
+                statusText.innerText = winner === 1 ? "CYAN JÁTÉKOS NYERTE A MECCSET!" : "PINK JÁTÉKOS NYERTE A MECCSET!";
+                subStatusText.innerText = `Végeredmény: ${score1} - ${score2}`;
+                restartBtn.classList.remove("hidden");
+                matchPointAlert.style.opacity = "0";
+            } else {
+                // Sima körváltás 2 másodperc után
+                subStatusText.innerText = "Következő kör indul...";
+                restartBtn.classList.add("hidden");
+                setTimeout(() => {
+                    nextRound();
+                }, 2000);
+            }
+        }
+
+        function nextRound() {
+            p1.reset();
+            p2.reset();
+            bullets = [];
+            particles = [];
+            roundOver = false;
+            statusScreen.classList.add("hidden");
+        }
+
+        function resetWholeMatch() {
+            score1 = 0;
+            score2 = 0;
+            p1ScoreEl.innerText = "0";
+            p2ScoreEl.innerText = "0";
+            matchPointAlert.style.opacity = "0";
+            restartBtn.classList.add("hidden");
+            nextRound();
+        }
+
+        function drawBackground() {
+            ctx.fillStyle = "rgba(20, 20, 35, 0.6)";
+            ctx.fillRect(80, 180, 100, 400);
+            ctx.fillRect(240, 120, 120, 400);
+            ctx.fillRect(450, 220, 110, 400);
+            ctx.fillRect(680, 150, 140, 400);
+            
+            ctx.strokeStyle = "rgba(0, 255, 204, 0.03)";
+            ctx.lineWidth = 1;
+            for(let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+
+            // Tető
+            ctx.fillStyle = '#161626';
+            ctx.fillRect(config.roofX, config.roofY, config.roofWidth, config.roofHeight);
+            ctx.fillStyle = '#00ffcc';
+            ctx.shadowBlur = 8; ctx.shadowColor = '#00ffcc';
+            ctx.fillRect(config.roofX, config.roofY, config.roofWidth, 4);
+            ctx.shadowBlur = 0;
+
+            // Frissítések csak ha megy a játék
+            if (gameActive) {
+                p1.update();
+                p2.update();
+            }
+            
+            p1.draw();
+            p2.draw();
+
+            // Lövedékek
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.update();
+                b.draw();
+
+                if (b.active && !roundOver) {
+                    if (b.x > p1.x && b.x < p1.x + p1.width && b.y > p1.y && b.y < p1.y + p1.height) {
+                        p1.velX = b.dir * 10; p1.velY = -2;
+                        createExplosion(b.x, b.y, '#00f0ff');
+                        b.active = false;
+                    } else if (b.x > p2.x && b.x < p2.x + p2.width && b.y > p2.y && b.y < p2.y + p2.height) {
+                        p2.velX = b.dir * 10; p2.velY = -2;
+                        createExplosion(b.x, b.y, '#ff0055');
+                        b.active = false;
+                    }
+                }
+                if (!b.active) bullets.splice(i, 1);
+            }
+
+            // Részecskék
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i]; p.x += p.vx; p.y += p.vy; p.alpha -= 0.03;
+                ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
